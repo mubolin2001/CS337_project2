@@ -1,6 +1,9 @@
 from bs4 import BeautifulSoup
 import requests
 from recipe import *
+import re
+from answering import *
+
 def fetch_recipe(url):
     """Fetch the recipe from the given URL and parse it."""
     try:
@@ -58,8 +61,6 @@ def fetch_recipe(url):
     except Exception as e:
         return {"error": f"An error occurred: {str(e)}"}
 
-
-
 def main():
     """Main bot interaction for fetching and displaying a recipe."""
     print("Bot: Hi there! Please provide a recipe URL from AllRecipes.com.")
@@ -94,6 +95,12 @@ def main():
                 elif user_input.lower() in ["3", "exit"]:
                     print("Bot: Goodbye!")
                     return
+                elif is_what_is_question(user_input):
+                    print("Bot:", handle_what_is_question(user_input))
+                elif is_how_to_question(user_input):
+                    print("Bot:", handle_how_to_question(user_input))
+                elif is_vague_how_to_question(user_input):
+                    print("Bot:", handle_vague_how_to_question(user_input))
                 else:
                     print("Bot: Please choose a valid option (1, 2, or 3).")
 
