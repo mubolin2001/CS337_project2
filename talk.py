@@ -62,16 +62,14 @@ def fetch_recipe(url):
                     steps[step_idx].next = steps[step_idx + 1]
                 elif step_idx == len(steps) - 1:
                     steps[step_idx].previous = steps[step_idx - 1]
-                    steps[step_idx].next = None
-
-                    
-                
+                    steps[step_idx].next = None               
             current_step = 0
             return (ingredient_list, None, None, steps, current_step, title )
         else:
             return {"error": f"Failed to fetch the recipe. HTTP Status Code: {response.status_code}"}
     else:
         print("please enter a valid url")
+
 def get_intent(input):
     user_input = input.split(" ")
     if "next" in user_input:
@@ -87,7 +85,6 @@ def get_intent(input):
         return ("jumping", int(step_num))
     if "ingredient" in user_input and "list" in user_input:
         return ("show_ingredient_list", 0)
-    
 
 def main():
     """Main bot interaction for fetching and displaying a recipe."""
@@ -106,21 +103,74 @@ def main():
         print("Bot: What do you want to do next?")
         print("Options:\n1. Show ingredients\n2. Show steps\n3. Exit")
             
-            while True:
-                user_input = input("User: ").strip()
-                if user_input == "1":
-                    print("Bot: Here are the ingredients:")
-                    for ingredient in recipe_data['ingredients']:
-                        print(f"- {ingredient}")
-                elif user_input == "2":
-                    print("Bot: Here are the steps:")
-                    for i, step in enumerate(recipe_data['steps'], start=1):
-                        print(f"Step {i}: {step}")
-                elif user_input.lower() in ["3", "exit"]:
-                    print("Bot: Goodbye!")
-                    return
-                else:
-                    print("Bot: Please choose a valid option (1, 2, or 3).")
+        while True:
+            user_input = input("User: ").strip()
+            if user_input == "1":
+                print("Bot: Here are the ingredients:")
+                for ingredient in ingredient_list:
+                    print(ingredient.quantity, ingredient.measurement, ingredient.name)
+                print("Bot: What do you want to do next?")
+                print("Options:\n1. Show ingredients\n2. Show steps\n3. Exit")
+            elif user_input == "2":
+
+                print(f"Bot: Here are the step {current_step + 1}")
+                print(steps[current_step].text)
+                print("ask me any questions or go next.")
+                while True:
+                    user_input = input("User: ").strip()
+                    intent, step_num = get_intent(user_input)
+                    # go next 
+                    if intent == "go_next":
+                        if current_step < len(steps) - 1:
+                            current_step += 1
+                            print(f"Bot: Here are the step {current_step + 1}")
+                            print(steps[current_step].text)
+                            print("ask me any questions")
+                        else:
+                            print("This is the last step")
+                    # go back
+                    if intent == "go_previous":
+                        if current_step > 0:
+                            current_step -= 1
+                            print(f"Bot: Here are the step {current_step + 1}")
+                            print(steps[current_step].text)
+                            print("ask me any questions")
+                        else:
+                            print("This is the first step")
+                    #repeat
+                    if intent == "repeat":
+                        print(f"Bot: Here are the step {current_step + 1}")
+                        print(steps[current_step].text)
+                        print("ask me any questions")
+                    #jumping
+                    if intent == "jumping":
+                        if step_num > 0 and step_num <= len(steps):
+                            current_step = step_num -1
+                            print(f"Bot: Here are the step {current_step + 1}")
+                            print(steps[current_step].text)
+                            print("ask me any questions")
+                        else:
+                            print(f"There are only {len(steps)} steps.")
+
+                    #show ingredient list
+                    if intent == "show_ingredient_list":
+                        print("Bot: Here are the ingredients:")
+                        for ingredient in ingredient_list:
+                            print(ingredient.quantity, ingredient.measurement, ingredient.name)
+                            print("ask me any questions")
+                    
+            # ask questions
+            elif is_what_is_question(user_input):
+                print("Bot:", handle_what_is_question(user_input))
+            elif is_how_to_question(user_input):
+                print("Bot:", handle_how_to_question(user_input))
+            elif is_vague_how_to_question(user_input):
+                print("Bot:", handle_vague_how_to_question(user_input))
+            elif user_input.lower() in ["3", "exit"]:
+                print("Bot: Goodbye!")
+                return
+            else:
+                print("Bot: Please choose a valid option (1, 2, or 3).")
 
 
 # Run the bot interaction
