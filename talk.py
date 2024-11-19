@@ -1,6 +1,8 @@
 from bs4 import BeautifulSoup
 import requests
 from recipe import *
+
+
 def fetch_recipe(url):
     """Fetch the recipe from the given URL and parse it."""
     try:
@@ -45,8 +47,6 @@ def fetch_recipe(url):
                     steps[step_idx].previous = steps[step_idx - 1]
                     steps[step_idx].next = None
 
-                    
-                
 
             return {
                 'title': title,
