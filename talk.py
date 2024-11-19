@@ -1,12 +1,13 @@
+
 from bs4 import BeautifulSoup
 import requests
 from recipe import *
+import spacy
 import re
 from answering import *
-
 def fetch_recipe(url):
     """Fetch the recipe from the given URL and parse it."""
-    try:
+    if url:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
@@ -16,6 +17,9 @@ def fetch_recipe(url):
             
             # Extract title
             title = soup.find('h1').text.strip() if soup.find('h1') else "Unknown Recipe"
+            #load models
+            nlp = spacy.load("en_core_web_md")
+            # SIMILARITY_THEREHOLD = 0.9
             
             # Extract ingredients
             ingredients_section = soup.find_all('ul', {'class': 'mm-recipes-structured-ingredients__list'})
@@ -31,11 +35,23 @@ def fetch_recipe(url):
 
             # Extract steps
             steps_section = soup.find_all('li', {'class': 'comp mntl-sc-block mntl-sc-block-startgroup mntl-sc-block-group--LI'})
+            # print(steps_section)
             # steps = [step.text.strip() for step in steps_section]
             steps = []
             for step_str in steps_section:
                 step = Step(step_str.text.strip(), None, None)
                 steps.append(step)
+                # found_ingredients = []
+                # for ingredient in ingredient_list:
+                #     ingredient_doc = nlp(ingredient.name)
+                #     for token in doc:
+                #         token_doc = nlp(token.text)
+                #         similarity = ingredient_doc.similarity(token_doc)
+                #         if similarity >= SIMILARITY_THEREHOLD:
+                #             found_ingredients.append((token, ingredient))
+                #             break
+                # found_ingredients = list(set(found_ingredients))
+                # step.founding_list = found_ingredients
             # recipe = Recipe(ingredient, None, None, steps)
             for step_idx in range(len(steps)):
                 if step_idx == 0:
@@ -50,16 +66,28 @@ def fetch_recipe(url):
 
                     
                 
-
-            return {
-                'title': title,
-                'ingredients': ingredient_list,
-                'steps': steps
-            }
+            current_step = 0
+            return (ingredient_list, None, None, steps, current_step, title )
         else:
             return {"error": f"Failed to fetch the recipe. HTTP Status Code: {response.status_code}"}
-    except Exception as e:
-        return {"error": f"An error occurred: {str(e)}"}
+    else:
+        print("please enter a valid url")
+def get_intent(input):
+    user_input = input.split(" ")
+    if "next" in user_input:
+        return ("go_next", 0)
+    if "back" in user_input or "previous" in user_input:
+        return ("go_previous", 0)
+    if "repeat" in user_input:
+        return ("repeat", 0)
+    pattern = r"\b(\d+)(st|nd|rd|th)\b"
+    step_match = re.search(pattern, input, re.IGNORECASE)
+    if step_match:
+        step_num = step_match.group(1)
+        return ("jumping", int(step_num))
+    if "ingredient" in user_input and "list" in user_input:
+        return ("show_ingredient_list", 0)
+    
 
 def main():
     """Main bot interaction for fetching and displaying a recipe."""
@@ -71,16 +99,12 @@ def main():
             url = f"https://{url}"
         print("Bot: Sure, let me fetch the recipe for you...")
 
-        recipe_data = fetch_recipe(url)
+        ingredient_list, tool, method, steps, current_step, title  = fetch_recipe(url)
 
-        if 'error' in recipe_data:
-            print(f"Bot: Oops! {recipe_data['error']}")
-            print("Bot: Please try again with a valid URL.")
-            print("current url: " + url)
-        else:
-            print(f"Bot: Alright! I fetched the recipe titled: \"{recipe_data['title']}\".")
-            print("Bot: What do you want to do next?")
-            print("Options:\n1. Show ingredients\n2. Show steps\n3. Exit")
+
+        print(f"Bot: Alright! I fetched the recipe titled: \"{title}\".")
+        print("Bot: What do you want to do next?")
+        print("Options:\n1. Show ingredients\n2. Show steps\n3. Exit")
             
             while True:
                 user_input = input("User: ").strip()
@@ -95,14 +119,9 @@ def main():
                 elif user_input.lower() in ["3", "exit"]:
                     print("Bot: Goodbye!")
                     return
-                elif is_what_is_question(user_input):
-                    print("Bot:", handle_what_is_question(user_input))
-                elif is_how_to_question(user_input):
-                    print("Bot:", handle_how_to_question(user_input))
-                elif is_vague_how_to_question(user_input):
-                    print("Bot:", handle_vague_how_to_question(user_input))
                 else:
                     print("Bot: Please choose a valid option (1, 2, or 3).")
+
 
 # Run the bot interaction
 if __name__ == "__main__":
