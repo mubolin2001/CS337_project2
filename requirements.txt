@@ -1,0 +1,8 @@
+nltk~=3.9.1
+spacy~=3.8.2
+requests~=2.32.3
+beautifulsoup4~=4.12.3
+lxml~=5.3.0
+RapidFuzz~=3.10.1
+torch~=2.5.1
+recipe~=0.37.2

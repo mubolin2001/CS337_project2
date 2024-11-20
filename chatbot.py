@@ -6,7 +6,8 @@ import spacy
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-
+from rapidfuzz.distance.Postfix_py import similarity
+from torch.fx.experimental.unify_refinements import substitute_solution_one_type
 
 from recipe import *
 
@@ -19,6 +20,8 @@ class RecipeBot:
         self.current_step = 0
         self.nlp = spacy.load("en_core_web_md")
         self.similarity_threshold = 0.9
+        self.conversation_history = open("conversation_history.txt", "w")
+        self.conversation_history.write("")
 
     def fetch_recipe(self, url):
         """
@@ -61,44 +64,47 @@ class RecipeBot:
         else:
             raise Exception(f"Failed to fetch the recipe. HTTP Status Code: {response.status_code}")
 
-    def respond(self, query):
+    def get_intent(self, input):
         """
-        Respond to the user's query based on intent.
+        Determine the intent of the user's query.
         """
-        intent, aux = self.get_intent(query)
+        user_input = input.lower()
+        quant_query = self.detect_quantity(user_input)
+
+        if "ingredient" in user_input:
+            return ("show_ingredient_list", 0)
+        elif "step" in user_input or "procedure" in user_input:
+            return ("show_step", 0)
+
+        if self.detect_vague_question(user_input):
+            return ("vague_question", 0)
+        if self.detect_external_question(user_input):
+            return ("external_question", 0)
+        if self.detect_temp(user_input):
+            return ("temp", self.current_step)
+        if self.detect_time(user_input):
+            return ("time", self.current_step)
+        if self.detect_substitute(user_input):
+            return ("substitute", 0)
+        if quant_query:
+            return ("ingredient_quantity", quant_query)
+
+        return ("unknown", 0)
+
+    def single_respond(self, intent, aux, query):
+        """
+        Respond to a single query. No internal continuous loop required.
+        :param query:
+        :return:
+        """
+        if intent == "unknown":
+            print("Bot: I'm sorry, I didn't understand that.")
+            return
 
         if intent == "show_ingredient_list":
             print("Bot: Here are the ingredients:")
             for ing in self.ingredients:
                 print(f"- {ing.quantity} {ing.measurement} {ing.name}")
-        elif intent == "show_step":
-            print(f"Bot: Here is step {self.current_step + 1}:")
-            while True:
-                print(self.steps[self.current_step].text)
-                print("Ask me any questions or say 'next', 'back', 'repeat', or 'exit'.")
-                question = input("User: ").strip()
-                if 'next' in question.lower():
-                    if self.current_step < len(self.steps) - 1:
-                        self.current_step += 1
-                    else:
-                        print("This is the last step.")
-                elif 'back' in question.lower() or 'previous' in question.lower():
-                    if self.current_step > 0:
-                        self.current_step -= 1
-                    else:
-                        print("This is the first step.")
-                elif 'repeat' in question.lower():
-                    continue
-
-                elif self.detect_jump_step(question) != -1:
-                    if self.detect_jump_step(question) > len(self.steps):
-                        print("Invalid step number.")
-                    else:
-                        self.current_step = self.detect_jump_step(question) - 1
-                        continue
-
-                if "exit" in question.lower():
-                    break
 
         if intent == "ingredient_quantity":
             ingredient = aux
@@ -112,30 +118,87 @@ class RecipeBot:
                     if similarity >= self.similarity_threshold:
                         flag = True
                         print(f"You need {ing.quantity} {ing.measurement} of {ing.name}.")
+                        self.conversation_history.write(f"You need {ing.quantity} {ing.measurement} of {ing.name}.\n")
                         continue
             if not flag:
                 print("Ingredient not found in the recipe.")
 
+        if intent == "external_question":
+            self.handle_external_question(query)
+        if intent == "vague_question":
+            self.handle_vague_question()
+
+        if intent == "temp":
+            #print("Found the temperature.")
+            self.handle_temp(self.steps[self.current_step].text)
+        if intent == "time":
+            #print("Found the time.")
+            self.handle_time(self.steps[self.current_step].text)
+
+
+    def respond(self, query):
+        """
+        Respond to the user's query based on intent.
+        """
+        intent, aux = self.get_intent(query)
+
+        if intent == "show_step":
+            while True:
+                print(f"Bot: Here is step {self.current_step + 1}:")
+                print(self.steps[self.current_step].text)
+                self.conversation_history.write(self.steps[self.current_step].text + "\n")
+                print("Ask me any questions or say 'next', 'back', 'repeat', or 'exit'.")
+                question = input("User: ").strip()
+                if "exit" in question.lower():
+                    break
+                sub_intent, sub_aux = self.get_intent(question.lower())
+                #print(f"Sub-intent: {sub_intent}, Sub-aux: {sub_aux}")
+
+                if 'next' in question.lower():
+                    if self.current_step < len(self.steps) - 1:
+                        self.current_step += 1
+                    else:
+                        print("This is the last step.")
+                elif 'back' in question.lower() or 'previous' in question.lower() or 'last' in question.lower():
+                    if self.current_step > 0:
+                        self.current_step -= 1
+                    else:
+                        print("This is the first step.")
+                elif 'repeat' in question.lower():
+                    continue
+
+                elif self.detect_jump_step(question) != -1:
+                    if self.detect_jump_step(question) > len(self.steps):
+                        print("Invalid step number.")
+                    else:
+                        self.current_step = self.detect_jump_step(question) - 1
+                        continue
+                else:
+                    self.single_respond(sub_intent, sub_aux, question)
+
+        else:
+            self.single_respond(intent, aux, query)
+
         return "I'm sorry, I didn't understand that."
 
-    def get_intent(self, input):
-        """
-        Determine the intent of the user's query.
-        """
-        user_input = input.lower()
-        quant_query = self.detect_quantity(user_input)
+    # Detect all kinds of query types
+    # Returns the detected information if necessary
+    def detect_temp(self, query):
+        """Detect the temperature in the current step."""
+        match = re.search(r"what is the temperature|temperature", query, re.IGNORECASE)
+        if match:
+            return True # return the matched temperature
+        return False
 
-        if "ingredient" in user_input:
-            return ("show_ingredient_list", 0)
-        elif "step" in user_input:
-            return ("show_step", 0)
-
-        if quant_query:
-            return ("ingredient_quantity", quant_query)
-
-        return ("unknown", 0)
+    def detect_time(self, query):
+        """Detect the time in the current step."""
+        match = re.search(r"how long|how much time|what is the amount of time|when", query, re.IGNORECASE)
+        if match:
+            return True
+        return False
 
     def detect_quantity(self, query):
+        """Detect the quantity of an ingredient in the query."""
         tokens = word_tokenize(query)
         filtered_tokens = [token for token in tokens if token.lower() not in stopwords.words("english")]
         new_query = " ".join(filtered_tokens)
@@ -145,14 +208,90 @@ class RecipeBot:
         return ingredients if ingredients else None
 
     def detect_jump_step(self, query):
+        """Detect the step number to jump to in the query."""
         pattern = r"(?:jump to|go to|navigate to|move to)\s+step\s+(\d+)"
         match = re.search(pattern, query)
         if match:
             return int(match.group(1))
         return -1
 
+    def detect_external_question(self, query):
+        pattern = r"(?:how do I|what is a|what is an)"
+        match = re.search(pattern, query)
+        if match:
+            return True
+        return False
+
+    def detect_vague_question(self, query):
+        pattern = r"(?:how do I do this|how do I do that)"
+        match = re.search(pattern, query)
+        if match:
+            return True
+        return False
+
     def detect_exit(self, query):
         pattern = r"(?:exit|quit|stop)"
         match = re.search(pattern, query)
         if match:
+            self.conversation_history.close()
             return True
+        return False
+
+    def detect_substitute(self, query):
+        doc = self.nlp(query)
+        substitutes = ['instead', 'substitute', 'replace', 'swap']
+        for token in doc:
+            if token.pos_ == "VERB" or token.pos_ == "ADV":
+                similarity = 0
+                for sub in substitutes:
+                    similarity = max(self.nlp(token.text).similarity(self.nlp(sub)), similarity)
+                if similarity >= self.similarity_threshold:
+                    return True
+        return False
+
+
+    # Handle all kinds of query types
+    # Prints the bot's response directly
+    def handle_external_question(self, query, platform="google"):
+        """Handle external questions by searching on Google or YouTube."""
+        user_input = query.lower().replace(" ", "+")
+
+        if platform == "google":
+            search_url = f"https://www.google.com/search?q={user_input}"
+        else:
+            search_url = f"https://www.youtube.com/results?search_query={query}"
+
+        self.conversation_history.write(f"Here is the search result for your question: {search_url}\n")
+        print(f"Here is the search result for your question: {search_url}")
+
+    def handle_vague_question(self):
+        """Handle vague questions by seeking the latest chat history, and then
+        ask it on google."""
+        # Seek the answer from the conversation history
+        try:
+            lines = self.conversation_history.readlines()
+            if lines:
+                self.handle_external_question(lines[-1])
+            else:
+                return "I'm sorry, I don't have an answer to that."
+        except Exception as e:
+            print(f"Error: file not found.")
+            return
+
+    def handle_temp(self, query):
+        """Handle temperature related questions."""
+        match = re.search(r"(\d+)\s?(°C|°F|degrees F|degrees C|degrees)", query, re.IGNORECASE)
+        if match:
+            print(f"The temperature is {match.group(0)}")
+        else:
+            print("No temperature specified.")
+
+    def handle_time(self, query):
+        """Handle time related questions."""
+        print("Looking for time...")
+        match = re.search(r"(\d+)\s?(minutes|hours|seconds)", query, re.IGNORECASE)
+        if match:
+            print(f"The time is {match.group(0)}")
+        else:
+            print("No time specified.")
+
