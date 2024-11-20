@@ -1,3 +1,5 @@
+from sys import platform
+
 from bs4 import BeautifulSoup
 import requests
 import spacy
@@ -252,9 +254,10 @@ class RecipeBot:
 
     # Handle all kinds of query types
     # Prints the bot's response directly
-    def handle_external_question(self, query, platform="google"):
+    def handle_external_question(self, query):
         """Handle external questions by searching on Google or YouTube."""
         user_input = query.lower().replace(" ", "+")
+        platform = "google" if 'video' not in query else "youtube"
 
         if platform == "google":
             search_url = f"https://www.google.com/search?q={user_input}"
