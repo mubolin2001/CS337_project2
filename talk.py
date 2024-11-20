@@ -4,6 +4,9 @@ import requests
 from recipe import *
 import spacy
 import re
+
+
+
 def fetch_recipe(url):
     """Fetch the recipe from the given URL and parse it."""
     if url:
@@ -71,6 +74,8 @@ def fetch_recipe(url):
             return {"error": f"Failed to fetch the recipe. HTTP Status Code: {response.status_code}"}
     else:
         print("please enter a valid url")
+
+
 def get_intent(input):
     user_input = input.split(" ")
     if "next" in user_input:
