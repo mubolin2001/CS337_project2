@@ -3,19 +3,64 @@ version: "3.1"
 intents:
   - greet
   - provide_url
+  - go_to_next_step
+  - go_back_step
+  - repeat_step
+  - go_to_firtst_step
+  - go_to_nth_step
+
+slots:
+  recipe_url:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: url
+  
+  recipes:
+    type: list
+    mappings:
+      - type: custom
+
+  steps:
+    type: list
+    mappings:
+      - type: custom
 
 actions:
   - action_validate_url
+  - action_parse_recipe
 
 entities:
   - url
+  - number
 
 responses:
   utter_greet:
     - text: "Hello! How can I assist you today?"
+  
   utter_ask_url:
     - text: "Please provide me with the URL of the recipe you'd like me to fetch."
+
   utter_invalid_url:
     - text: "I'm sorry, but the URL you provided is invalid. Please try again."
+
   utter_valid_url:
     - text: "Got it! Let me work with the recipe from AllRecipes."
+
+  utter_navigation_options:
+    - text:
+        Alright. So let's start working with "{recipe_title}". What do you want to do?
+        [1] Go over ingredients list 
+        [2] Go over recipe steps.
+  
+  utter_invalid_choice:
+    - text: "Sorry, I didn't understand that. Please choose [1] or [2]."
+
+  utter_navigation_help:
+    - text: |
+        You can say things like:
+        - "Go back one step"
+        - "Go to the next step"
+        - "Repeat please"
+        - "Take me to the 1st step"
+        - "Take me to the n-th step"
