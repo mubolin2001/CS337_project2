@@ -7,7 +7,8 @@ import re
 from answering import *
 def fetch_recipe(url):
     """Fetch the recipe from the given URL and parse it."""
-    if url:
+    # check if the URL is a valid AllRecipes.com URL
+    if "allrecipes.com" in url:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
@@ -85,6 +86,17 @@ def get_intent(input):
         return ("jumping", int(step_num))
     if "ingredient" in user_input and "list" in user_input:
         return ("show_ingredient_list", 0)
+    return ("unknown", 0)
+
+def handle_other_questions(user_input):
+    if is_what_is_question(user_input):
+        print("Bot:", handle_what_is_question(user_input))
+    elif is_how_to_question(user_input):
+        print("Bot:", handle_how_to_question(user_input))
+    elif is_vague_how_to_question(user_input):
+        print("Bot:", handle_vague_how_to_question(user_input))
+    else:
+        print("Bot: I am not sure what you are asking. Please ask me a valid question.")
 
 def main():
     """Main bot interaction for fetching and displaying a recipe."""
@@ -92,6 +104,7 @@ def main():
 
     while True:
         url = input("User: ").strip()
+
         if not url.startswith("http"):
             url = f"https://{url}"
         print("Bot: Sure, let me fetch the recipe for you...")
@@ -158,14 +171,10 @@ def main():
                         for ingredient in ingredient_list:
                             print(ingredient.quantity, ingredient.measurement, ingredient.name)
                             print("ask me any questions")
-                    
-            # ask questions
-            elif is_what_is_question(user_input):
-                print("Bot:", handle_what_is_question(user_input))
-            elif is_how_to_question(user_input):
-                print("Bot:", handle_how_to_question(user_input))
-            elif is_vague_how_to_question(user_input):
-                print("Bot:", handle_vague_how_to_question(user_input))
+
+                    if intent == "unknown":
+                        handle_other_questions(user_input)
+                                    
             elif user_input.lower() in ["3", "exit"]:
                 print("Bot: Goodbye!")
                 return

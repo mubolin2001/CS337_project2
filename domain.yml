@@ -1,0 +1,21 @@
+version: "3.1"
+
+intents:
+  - greet
+  - provide_url
+
+actions:
+  - action_validate_url
+
+entities:
+  - url
+
+responses:
+  utter_greet:
+    - text: "Hello! How can I assist you today?"
+  utter_ask_url:
+    - text: "Please provide me with the URL of the recipe you'd like me to fetch."
+  utter_invalid_url:
+    - text: "I'm sorry, but the URL you provided is invalid. Please try again."
+  utter_valid_url:
+    - text: "Got it! Let me work with the recipe from AllRecipes."

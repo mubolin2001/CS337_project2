@@ -1,0 +1,13 @@
+version: "3.1"
+nlu:
+  - intent: greet
+    examples: |
+      - Hello
+      - Hi
+      - Hey there
+
+  - intent: provide_url
+    examples: |
+      - Here's the link: https://www.allrecipes.com/recipe/218091/classic-and-simple-meat-lasagna/
+      - Go to this URL: https://www.allrecipes.com/recipe/218091/
+      - I want to see this recipe https://www.allrecipes.com/recipe/218091/
