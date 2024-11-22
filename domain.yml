@@ -10,6 +10,12 @@ intents:
   - repeat_step
   - go_to_first_step
   - go_to_nth_step
+  - ask_quantity
+  - ask_temperature
+  - ask_time
+  - ask_done
+  - ask_substitution
+  - ask_questions
 
 slots:
   recipe_url:
@@ -44,6 +50,8 @@ actions:
   - action_show_previous_step
   - action_repeat_current_step
   - action_take_to_nth_step
+  - action_provide_step_details
+  - action_answer_questions
 
 entities:
   - url
@@ -80,3 +88,9 @@ responses:
         - "Repeat please"
         - "Take me to the 1st step"
         - "Take me to the n-th step"
+  
+  utter_no_substitution_found:
+    - text: "Sorry, I couldn't find any substitutions for this step."
+
+  utter_invalid_request:
+    - text: "I didn't quite understand that. Could you rephrase or ask about the ingredients, temperature, time, or substitutions?"

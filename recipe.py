@@ -25,11 +25,15 @@ class Method:
         }
 
 class Step:
-    def __init__(self, text, previous, next):
+    def __init__(self, text, previous, next, ingredients=None, time=None, temperature=None, tool_substitution=None):
         self.text = text
-        self.previous = previous
-        self.next = next
+        #self.previous = previous
+        #self.next = next
         self.founding_list = None
+        self.ingredients = ingredients if ingredients else {}  #Ingredients used in this step
+        self.time = time  # Time required for this step, if any
+        self.temperature = temperature  # Temperature required for this step, if any
+        self.tool_substitution = tool_substitution  # Possible tool substitutions for this step
     
     def to_dict(self, seen=None):
         if seen is None:
@@ -42,8 +46,12 @@ class Step:
 
         return {
             "text": self.text,
-            "previous": self.previous.to_dict(seen) if self.previous else None,
-            "next": self.next.to_dict(seen) if self.next else None
+            #"previous": self.previous.to_dict(seen) if self.previous else None,
+            #"next": self.next.to_dict(seen) if self.next else None,
+            "ingredients": self.ingredients,
+            "time": self.time,
+            "temperature": self.temperature
+            #"tool_substitution": self.tool_substitution
         }
 
 class Recipe:

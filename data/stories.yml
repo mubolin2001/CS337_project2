@@ -35,3 +35,33 @@ stories:
   steps:
   - intent: repeat_step
   - action: action_repeat_current_step
+
+- story: User asks about parameters of current step-quantity
+  steps:
+  - intent: ask_quantity
+  - action: action_provide_step_details
+
+- story: User asks about parameters of current step-temperature
+  steps:
+  - intent: ask_temperature
+  - action: action_provide_step_details
+
+- story: User asks about parameters of current step-time
+  steps:
+  - intent: ask_time
+  - action: action_provide_step_details
+
+- story: User asks about parameters of current step-done
+  steps:
+  - intent: ask_done
+  - action: action_provide_step_details
+
+- story: User asks about parameters of current step-substitution
+  steps:
+  - intent: ask_substitution
+  - action: action_provide_step_details
+
+- story: User asks questions
+  steps:
+  - intent: ask_questions
+  - action: action_answer_questions

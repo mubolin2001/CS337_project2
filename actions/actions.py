@@ -33,6 +33,7 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 from recipe import *
+import spacy
 import json
 
 postfix = {1: "st", 2: "nd", 3: "rd"}
@@ -73,6 +74,7 @@ class ActionParseRecipe(Action):
 
         # Try to fetch the recipe data from the URL
         try:
+            reset()
             dispatcher.utter_message(text=f"Sure, let me fetch the recipe from {url}")
             headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -90,7 +92,7 @@ class ActionParseRecipe(Action):
             cooking_methods = self.parse_methods(soup)
 
             # Parse steps
-            steps = self.parse_steps(soup)
+            steps = self.parse_steps(soup, ingredients)
 
             tools = []
 
@@ -107,8 +109,6 @@ class ActionParseRecipe(Action):
         except Exception as e:
             dispatcher.utter_message(text=f"Sorry, I couldn't fetch the recipe. Error: {e}")
             return []
-
-        return []
 
     def parse_ingredients(self, soup):
         ingredients_section = soup.find_all('ul', {'class': 'mm-recipes-structured-ingredients__list'})
@@ -135,22 +135,46 @@ class ActionParseRecipe(Action):
         methods = Method(primary_method, other_method)
         return methods
 
-    def parse_steps(self, soup):
+    def parse_steps(self, soup, ingredients):
         steps_section = soup.find_all('li', {'class': 'comp mntl-sc-block mntl-sc-block-startgroup mntl-sc-block-group--LI'})
         steps = []
+
+        nlp = spacy.load("en_core_web_md")
+        similarity_threshold = 0.9
+
         for step_str in steps_section:
             step = Step(step_str.text.strip(), None, None)
+            
+            # find parameters for each step
+            # ingredients
+            ingredients_at_step = {}
+            temperature_at_step = None
+            time_at_step = None
+            tool_substitution_at_step = None
+
+            # find ingredients
+            for ingredient in ingredients:
+                ingredient_name = ingredient.name
+                if ingredient_name in step.text:
+                    ingredients_at_step[ingredient_name] = ingredient.quantity
+            step.ingredients = ingredients_at_step
+
+            # find temperature in the text
+            temperature_pattern = re.compile(r"(\d+)\s*(?:degrees|°)?\s*(F|C)")
+            temperature_element = re.search(temperature_pattern, step.text)
+            if temperature_element:
+                temperature_at_step = temperature_element.group(0)
+            step.temperature = temperature_at_step
+
+            # find time
+            time_pattern = re.compile(r"\d+\s?min|\d+\s?hour")
+            time_element = re.search(time_pattern, step.text)
+            if time_element:
+                time_at_step = time_element.group(0)
+            step.time = time_at_step
+
             steps.append(step)
-        for step_idx in range(len(steps)):
-            if step_idx == 0:
-                steps[step_idx].previous = None
-                steps[step_idx].next = steps[step_idx + 1]
-            elif step_idx != 0 and step_idx != len(steps) - 1:
-                steps[step_idx].previous = steps[step_idx - 1]
-                steps[step_idx].next = steps[step_idx + 1]
-            elif step_idx == len(steps) - 1:
-                steps[step_idx].previous = steps[step_idx - 1]
-                steps[step_idx].next = None               
+        
         return steps
 
 class ActionShowIngredients(Action):
@@ -164,6 +188,11 @@ class ActionShowIngredients(Action):
         
         recipe = tracker.get_slot("recipe_object")
         recipe = json.loads(recipe)
+
+        user_input = tracker.latest_message.get("text")
+        if user_input == "2":
+            return [SlotSet("user_context", "steps"),
+                    FollowupAction("action_take_to_first_step")]
 
         # Show the list of ingredients
         dispatcher.utter_message(text="Here are the ingredients:")
@@ -202,7 +231,10 @@ class ActionShowNextStep(Action):
             return [FollowupAction("utter_ask_url")]
 
         # load the current step index as integer
-        current_step_index = int(tracker.get_slot("current_step_index")) or 0
+        if tracker.get_slot("current_step_index") is None:
+            current_step_index = 0
+        else:
+            current_step_index = int(tracker.get_slot("current_step_index"))
         #dispatcher.utter_message(text=f"current step index: {current_step_index}")
 
         recipe = tracker.get_slot("recipe_object")
@@ -298,4 +330,146 @@ class ActionTakeToNthStep(Action):
         if step_number.isdigit():
             return int(step_number)
         return ordinals.get(step_number.lower(), None)
+
+class ActionProvideStepDetails(Action):
+    def name(self) -> str:
+        return "action_provide_step_details"
+    
+    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: dict) -> list:
+        # Get the latest user message
+        user_input = tracker.latest_message.get("text")
+        current_step = tracker.get_slot("current_step_index")
         
+        # Check if we have a current step
+        if current_step is None:
+            dispatcher.utter_message(text="I don't know which step you're referring to. Please start from the beginning or navigate to a step.")
+            return []
+
+        recipe = tracker.get_slot("recipe_object")
+        recipe = json.loads(recipe)
+        current_step_index = int(tracker.get_slot("current_step_index"))
+        current_step = recipe['steps'][current_step_index]
+
+        # Handle parameter-related questions about the current step
+        if re.search(r"how much|quantity", user_input, re.IGNORECASE):
+            return self.handle_quantity_query(dispatcher, current_step)
+        elif re.search(r"temperature", user_input, re.IGNORECASE):
+            return self.handle_temperature_query(dispatcher, current_step)
+        elif re.search(r"how long|time", user_input, re.IGNORECASE):
+            return self.handle_time_query(dispatcher, current_step)
+        elif re.search(r"when is it done", user_input, re.IGNORECASE):
+            return self.handle_done_query(dispatcher, current_step)
+        elif re.search(r"substitute", user_input, re.IGNORECASE):
+            return self.handle_substitution_query(dispatcher, current_step)
+        else:
+            dispatcher.utter_message(text="I didn't quite understand that. Could you rephrase or ask about the ingredients, temperature, time, or substitutions?")
+            return []
+
+    def handle_quantity_query(self, dispatcher: CollectingDispatcher, current_step) -> list:
+        ingredients = current_step['ingredients']
+        if ingredients:
+            ingredient_list = "\n".join([f"{ingredient['name']}: {ingredient['quantity']} {ingredient['measurement']}" for ingredient in ingredients])
+            dispatcher.utter_message(text=f"Here are the ingredients and their quantities:\n{ingredient_list}")
+        else:
+            dispatcher.utter_message(text="I couldn't find the ingredients for this step. Please check again.")
+        return []
+
+    def handle_temperature_query(self, dispatcher: CollectingDispatcher, current_step) -> list:
+        # Example: Assume the step has a temperature instruction
+        temperature = current_step['temperature']
+        if temperature:
+            dispatcher.utter_message(text=f"The required temperature is {temperature} degrees.")
+        else:
+            dispatcher.utter_message(text="Sorry, I couldn't find the temperature for this step.")
+        return []
+
+    def handle_time_query(self, dispatcher: CollectingDispatcher, current_step) -> list:
+        # Example: Assume the step has a time instruction
+        time = current_step['time']
+        if time:
+            dispatcher.utter_message(text=f"You should cook for {time}.")
+        else:
+            dispatcher.utter_message(text="Sorry, I couldn't find the cooking time for this step.")
+        return []
+
+    def handle_done_query(self, dispatcher: CollectingDispatcher, current_step) -> list:
+        # Example: Assume the step has a done indication
+        done_indicator = current_step.get("done_indicator", None)
+        if done_indicator:
+            dispatcher.utter_message(text=f"You'll know it's done when: {done_indicator}.")
+        else:
+            dispatcher.utter_message(text="Sorry, I couldn't find a done indicator for this step.")
+        return []
+
+    def handle_substitution_query(self, dispatcher: CollectingDispatcher, current_step) -> list:
+        # Example: Assume current_step has a substitution option
+        substitutions = current_step.get("substitutions", None)
+        if substitutions:
+            dispatcher.utter_message(text=f"You can substitute the following:\n{substitutions}")
+        else:
+            dispatcher.utter_message(text="Sorry, I couldn't find any substitutions for this step.")
+        return []
+
+class ActionAnswerQuestions(Action):
+    def name(self) -> str:
+        return "action_answer_questions"
+
+    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain):
+        user_message = tracker.latest_message.get("text").lower()  # User's latest message
+        current_step = tracker.get_slot("current_step")  # Current step in the recipe
+        recipe = tracker.get_slot("recipe_object")  # Recipe object
+        recipe = json.loads(recipe)
+
+        # Handle "what is" questions
+        if "what is" in user_message:
+            return self.handle_what_is_question(user_message, dispatcher)
+
+        # Handle "how to" questions (specific)
+        elif "how to" in user_message:
+            return self.handle_how_to_question(user_message, dispatcher)
+
+        # Handle vague "how to" questions
+        elif "how do i do that" in user_message or "how to do that" in user_message:
+            current_step = recipe['steps'][int(tracker.get_slot("current_step_index"))]
+            return self.handle_vague_how_to_question(dispatcher, current_step)
+
+        # Fallback for unrecognized question types
+        dispatcher.utter_message(text="Sorry, I couldn't understand your question. Could you please clarify?")
+        return []
+
+    def handle_what_is_question(self, user_message, dispatcher):
+        # Example for simple tool-related questions
+
+        tool = re.search(r"what is (?:an|a) (\w+)", user_message)
+        if tool:
+            tool_name = tool.group(1)
+            google_url = f"https://www.google.com/search?q=what+is+a+{tool_name}"
+            youtube_url = f"https://www.youtube.com/results?search_query=what+is+a+{tool_name}"
+            dispatcher.utter_message(text=f"Here are some links to learn about {tool_name}:\n- Google: {google_url}\n- YouTube: {youtube_url}")
+        else:
+            dispatcher.utter_message(text="Sorry, I couldn't find any information on that tool.")
+        return []
+
+    def handle_how_to_question(self, user_message, dispatcher):
+        # Handle specific "how to" questions (e.g., "How do I preheat the oven?")
+        technique = re.search(r"how to (\w+)", user_message)  # Extract the technique
+        if technique:
+            technique_name = technique.group(1)
+            google_url = f"https://www.google.com/search?q=how+to+{technique_name}"
+            youtube_url = f"https://www.youtube.com/results?search_query=how+to+{technique_name}"
+            dispatcher.utter_message(text=f"Here are some links to learn how to {technique_name}:\n- Google: {google_url}\n- YouTube: {youtube_url}")
+        else:
+            dispatcher.utter_message(text="Sorry, I couldn't find instructions for that technique.")
+        return []
+
+    def handle_vague_how_to_question(self, dispatcher, current_step):
+        # Handle vague "how to" questions like "How do I do that?"
+        if current_step:
+            # Assuming 'current_step' contains a description of what the user is working on (e.g., a technique)
+            technique = current_step.get("text")  # You can refine this further to extract techniques
+            google_url = f"https://www.google.com/search?q=how+to+{technique.replace(' ', '+')}"
+            youtube_url = f"https://www.youtube.com/results?search_query=how+to+{technique.replace(' ', '+')}"
+            dispatcher.utter_message(text=f"Here are some links to learn how to {technique}:\n- Google: {google_url}\n- YouTube: {youtube_url}")
+        else:
+            dispatcher.utter_message(text="Sorry, I couldn't find any reference to what you're trying to do. Could you please clarify?")
+        return []    

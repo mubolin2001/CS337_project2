@@ -88,6 +88,48 @@ nlu:
       - Go to the [3rd](step_number) step
       - Go to the [third](step_number) step
 
+  - intent: ask_quantity
+    examples: |
+      - How much of the garlic do I need?
+      - What’s the quantity of flour?
+
+  - intent: ask_temperature
+    examples: |
+      - What temperature should the oven be?
+      - At what temperature should I bake the cake?
+
+  - intent: ask_time
+    examples: |
+      - How long should I bake it for?
+      - How long does it take to cook?
+
+  - intent: ask_done
+    examples: |
+      - How do I know when it’s done?
+      - When is it done?
+
+  - intent: ask_substitution
+    examples: |
+      - Can I substitute the garlic?
+      - What can I use instead of tomatoes?
+    
+  - intent: ask_questions
+    examples: |
+      - What is an oven?
+      - What is a whisk?
+      - What is a spatula?
+      - What is a pan?
+      - What is a pot?
+      - What is a bowl?
+      - What is a knife?
+      - What is a cutting board?
+      - How to chop?
+      - How to dice?
+      - How to mince?
+      - How to preheat the oven?
+      - How do I do that?
+      - How do I do this?
+
 regex:
   - name: step_number
     pattern: "(?:\\d+|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)"
