@@ -1,4 +1,4 @@
-# Recipe rasa
+# Recipe Rasa
 ## Prerequisites
 - We use python 3.10
 - Run the following command to install the required packages
