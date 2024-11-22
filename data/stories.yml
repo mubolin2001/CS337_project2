@@ -14,15 +14,24 @@ stories:
   - intent: choose_ingredients
   - action: action_show_ingredients
 
-- story: Go over steps
+- story: Go over steps-next
   steps:
   - intent: choose_steps
   - action: action_take_to_first_step
   - intent: go_to_next_step
   - action: action_show_next_step
+
+- story: Go over steps-back
+  steps:
   - intent: go_back_step
   - action: action_show_previous_step
+
+- story: Go to nth step
+  steps:
   - intent: go_to_nth_step
   - action: action_take_to_nth_step
+
+- story: Repeat current step
+  steps:
   - intent: repeat_step
   - action: action_repeat_current_step

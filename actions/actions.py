@@ -35,6 +35,12 @@ from bs4 import BeautifulSoup
 from recipe import *
 import json
 
+postfix = {1: "st", 2: "nd", 3: "rd"}
+
+# reset memory
+def reset():
+    return [SlotSet("recipe_url", None), SlotSet("recipe_object", None), SlotSet("current_step_index", None)]
+
 class ActionValidateURL(Action):
     def name(self) -> str:
         return "action_validate_url"
@@ -94,7 +100,8 @@ class ActionParseRecipe(Action):
             dispatcher.utter_message(text="[1] Go over ingredients list\n[2] Go over recipe steps.")
 
             return [
-                SlotSet("recipe_object", json.dumps(recipe.to_dict()))
+                SlotSet("recipe_object", json.dumps(recipe.to_dict())),
+                SlotSet("user_context", "menu")
             ]
 
         except Exception as e:
@@ -165,6 +172,26 @@ class ActionShowIngredients(Action):
 
         return []
 
+class ActionTakeToFirstStep(Action):
+    def name(self) -> str:
+        return "action_take_to_first_step"
+
+    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: dict) -> list:
+        if not tracker.get_slot("recipe_url"):
+            dispatcher.utter_message(text="Please provide a recipe URL first.")
+            return [FollowupAction("utter_ask_url")]
+        user_input = tracker.latest_message.get("text")
+        user_context = tracker.get_slot("user_context")
+        if user_input == "1" and user_context == "menu":
+            return [FollowupAction("action_show_ingredients")]
+        SlotSet("user_context", "steps")
+        # Set the step to the first one
+        recipe = tracker.get_slot("recipe_object")
+        recipe = json.loads(recipe)
+        step = recipe['steps'][0]
+        dispatcher.utter_message(text=f"Taking you to the first step: {step['text']}.")
+        return [SlotSet("current_step_index", 0)]
+
 class ActionShowNextStep(Action):
     def name(self) -> str:
         return "action_show_next_step"
@@ -174,7 +201,9 @@ class ActionShowNextStep(Action):
             dispatcher.utter_message(text="Please provide a recipe URL first.")
             return [FollowupAction("utter_ask_url")]
 
-        current_step_index = tracker.get_slot("current_step_index") or 0
+        # load the current step index as integer
+        current_step_index = int(tracker.get_slot("current_step_index")) or 0
+        #dispatcher.utter_message(text=f"current step index: {current_step_index}")
 
         recipe = tracker.get_slot("recipe_object")
         recipe = json.loads(recipe)
@@ -182,11 +211,15 @@ class ActionShowNextStep(Action):
         # Increment index and get the next step
         next_step_index = current_step_index + 1
         if next_step_index < len(recipe['steps']):
-            dispatcher.utter_message(text=f"The {next_step_index + 1}th step is: {recipe['steps'][next_step_index]['text']}")
+            dispatcher.utter_message(text=f"The {next_step_index + 1}"
+                                     f"{postfix[next_step_index + 1] if next_step_index + 1 in postfix else 'th'} "
+                                     f"step is: {recipe['steps'][next_step_index]['text']}"
+                                     )
             return [SlotSet("current_step_index", next_step_index)]
         else:
             dispatcher.utter_message(text="You are already at the last step.")
             return []
+        return []
 
 class ActionShowPreviousStep(Action):
     def name(self) -> str:
@@ -197,13 +230,16 @@ class ActionShowPreviousStep(Action):
             dispatcher.utter_message(text="Please provide a recipe URL first.")
             return [FollowupAction("utter_ask_url")]
 
-        current_step_index = tracker.get_slot("current_step_index") or 0
+        current_step_index = int(tracker.get_slot("current_step_index")) or 0
         recipe = tracker.get_slot("recipe_object")
         recipe = json.loads(recipe)
         # Decrement index and get the previous step
         prev_step_index = current_step_index - 1
         if prev_step_index >= 0:
-            dispatcher.utter_message(text=f"The {prev_step_index + 1}th step is: {recipe['steps'][prev_step_index]['text']}")
+            dispatcher.utter_message(text=f"The {prev_step_index + 1}"
+                                     f"{postfix[prev_step_index + 1] if prev_step_index + 1 in postfix else 'th'} "
+                                     f"step is: {recipe['steps'][prev_step_index]['text']}"
+                                     )
             return [SlotSet("current_step_index", prev_step_index)]
         else:
             dispatcher.utter_message(text="You are already at the first step.")
@@ -218,28 +254,12 @@ class ActionRepeatCurrentStep(Action):
             dispatcher.utter_message(text="Please provide a recipe URL first.")
             return [FollowupAction("utter_ask_url")]
 
-        current_step_index = tracker.get_slot("current_step_index") or 0
+        current_step_index = int(tracker.get_slot("current_step_index")) or 0
         recipe = tracker.get_slot("recipe_object")
         recipe = json.loads(recipe)
         # Repeat the current step
         dispatcher.utter_message(text=f"The current step is: {recipe['steps'][current_step_index]['text']}")
         return []
-
-class ActionTakeToFirstStep(Action):
-    def name(self) -> str:
-        return "action_take_to_first_step"
-
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: dict) -> list:
-        if not tracker.get_slot("recipe_url"):
-            dispatcher.utter_message(text="Please provide a recipe URL first.")
-            return [FollowupAction("utter_ask_url")]
-
-        # Set the step to the first one
-        recipe = tracker.get_slot("recipe_object")
-        recipe = json.loads(recipe)
-        step = recipe['steps'][0]
-        dispatcher.utter_message(text=f"Taking you to the first step: {step['text']}.")
-        return [SlotSet("current_step_index", 0)]
 
 class ActionTakeToNthStep(Action):
     def name(self) -> str:
@@ -250,15 +270,32 @@ class ActionTakeToNthStep(Action):
             dispatcher.utter_message(text="Please provide a recipe URL first.")
             return [FollowupAction("utter_ask_url")]
 
-        step_number = tracker.get_slot("step_number")  # Assuming the user provided a number
+        step_number = list(tracker.get_latest_entity_values("step_number"))
+        if not step_number:
+            dispatcher.utter_message(text="I couldn't understand which step you want to go to.")
+            return []
+
         recipe = tracker.get_slot("recipe_object")
         recipe = json.loads(recipe)
 
+        step_number = self.convert_to_index(step_number[0])
         # Take user to the nth step (handling out-of-bounds errors)
         if step_number and 0 <= step_number - 1 < len(recipe['steps']):
-            dispatcher.utter_message(text=f"The {step_number}th step is: {recipe['steps'][step_number - 1]['text']}")
+            dispatcher.utter_message(text=f"The {step_number}"
+                                     f"{postfix[step_number] if step_number in postfix else 'th'} "
+                                     f"step is: {recipe['steps'][step_number - 1]['text']}"
+                                     )
             return [SlotSet("current_step_index", step_number - 1)]
         else:
             dispatcher.utter_message(text="Invalid step number.")
             return []
+    
+    def convert_to_index(self, step_number):
+        ordinals = {
+            "first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5, "sixth": 6, 
+            "seventh": 7, "eighth": 8, "ninth": 9, "tenth": 10
+            }
+        if step_number.isdigit():
+            return int(step_number)
+        return ordinals.get(step_number.lower(), None)
         

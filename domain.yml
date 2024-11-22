@@ -25,9 +25,14 @@ slots:
       - type: custom
 
   current_step_index:
+    type: float
+    mappings:
+      - type: custom
+
+  user_context:
     type: text
     mappings:
-      - type: from_text
+      - type: custom
   
   
 actions:
