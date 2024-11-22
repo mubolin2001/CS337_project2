@@ -3,10 +3,12 @@ version: "3.1"
 intents:
   - greet
   - provide_url
+  - choose_ingredients
+  - choose_steps
   - go_to_next_step
   - go_back_step
   - repeat_step
-  - go_to_firtst_step
+  - go_to_first_step
   - go_to_nth_step
 
 slots:
@@ -15,24 +17,33 @@ slots:
     mappings:
       - type: from_entity
         entity: url
+    influence_conversation: true
   
-  recipes:
-    type: list
+  recipe_object:
+    type: any
     mappings:
       - type: custom
 
-  steps:
-    type: list
+  current_step_index:
+    type: text
     mappings:
-      - type: custom
-
+      - type: from_text
+  
+  
 actions:
   - action_validate_url
   - action_parse_recipe
+  - action_show_ingredients
+  - action_take_to_first_step
+  - action_show_next_step
+  - action_show_previous_step
+  - action_repeat_current_step
+  - action_take_to_nth_step
 
 entities:
   - url
   - number
+  - step_number
 
 responses:
   utter_greet:

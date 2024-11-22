@@ -1,5 +1,19 @@
 version: "3.1"
 nlu:
+  - lookup: step_number
+    examples: |
+      - 1
+      - 2
+      - 3
+      - 4th
+      - 5th
+      - 6th
+      - first
+      - second
+      - third
+      - fourth
+      - fifth
+
   - intent: greet
     examples: |
       - Hello
@@ -10,4 +24,70 @@ nlu:
     examples: |
       - Here's the link: [https://www.allrecipes.com/recipe/218091/classic-and-simple-meat-lasagna/](url)
       - Go to this URL: [https://www.allrecipes.com/recipe/218091/](url)
-      - I want to see this recipe [https://www.allrecipes.com/recipe/218091/](url)
+      - I want to see this recipe [https://www.allrecipes.com/recipe/218091/]
+
+  - intent: choose_ingredients
+    examples: |
+      - Show me the ingredients
+      - What are the ingredients
+      - List the ingredients
+      - Show me the ingredients list
+      - Go over recipe ingredients
+      - 1
+
+  - intent: choose_steps
+    examples: |
+      - Show me the steps
+      - What are the steps
+      - List the steps
+      - Show me the steps list
+      - Go over recipe steps
+      - 2
+    
+  - intent: go_to_next_step
+    examples: |
+      - Next step
+      - Show me the next step
+      - What's the next step
+      - Go to the next step
+      - Continue
+  
+  - intent: go_back_step
+    examples: |
+      - Go back
+      - Previous step
+      - Show me the previous step
+      - What's the previous step
+      - Go to the previous step
+      - Back
+  
+  - intent: repeat_step
+    examples: |
+      - Repeat
+      - Repeat the step
+      - Show me the current step again
+      - What's the current step
+      - Repeat the current step
+      - Again
+  
+  - intent: go_to_first_step
+    examples: |
+      - Go to the first step
+      - Show me the first step
+      - What's the first step
+      - Start from the beginning
+      - Start
+  
+  - intent: go_to_nth_step
+    examples: |
+      - Go to step [3](step_number)
+      - Show me step [3](step_number)
+      - What's step [3](step_number)
+      - Go to the [3rd](step_number) step
+      - Go to the [third](step_number) step
+      - Go to the [3rd](step_number) step
+      - Go to the [third](step_number) step
+
+regex:
+  - name: step_number
+    pattern: "(?:\\d+|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)"

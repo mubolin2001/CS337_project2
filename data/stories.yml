@@ -1,10 +1,28 @@
 version: "3.1"
 
 stories:
-- story: Recipe URL validation and parsing
+- story: Recipe URL validatio, parsing and navigates
   steps:
   - intent: greet
   - action: utter_greet
   - action: utter_ask_url
   - intent: provide_url
   - action: action_validate_url
+
+- story: Go over ingredients
+  steps:
+  - intent: choose_ingredients
+  - action: action_show_ingredients
+
+- story: Go over steps
+  steps:
+  - intent: choose_steps
+  - action: action_take_to_first_step
+  - intent: go_to_next_step
+  - action: action_show_next_step
+  - intent: go_back_step
+  - action: action_show_previous_step
+  - intent: go_to_nth_step
+  - action: action_take_to_nth_step
+  - intent: repeat_step
+  - action: action_repeat_current_step
