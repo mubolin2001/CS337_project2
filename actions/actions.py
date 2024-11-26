@@ -33,7 +33,6 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 from recipe import *
-import spacy
 import json
 
 postfix = {1: "st", 2: "nd", 3: "rd"}
@@ -138,9 +137,6 @@ class ActionParseRecipe(Action):
     def parse_steps(self, soup, ingredients):
         steps_section = soup.find_all('li', {'class': 'comp mntl-sc-block mntl-sc-block-startgroup mntl-sc-block-group--LI'})
         steps = []
-
-        nlp = spacy.load("en_core_web_md")
-        similarity_threshold = 0.9
 
         for step_str in steps_section:
             step = Step(step_str.text.strip(), None, None)
