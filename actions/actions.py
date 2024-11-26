@@ -138,6 +138,9 @@ class ActionParseRecipe(Action):
         steps_section = soup.find_all('li', {'class': 'comp mntl-sc-block mntl-sc-block-startgroup mntl-sc-block-group--LI'})
         steps = []
 
+        # nlp = spacy.load("en_core_web_md")
+        similarity_threshold = 0.9
+
         for step_str in steps_section:
             step = Step(step_str.text.strip(), None, None)
             
@@ -448,7 +451,7 @@ class ActionAnswerQuestions(Action):
 
     def handle_how_to_question(self, user_message, dispatcher):
         # Handle specific "how to" questions (e.g., "How do I preheat the oven?")
-        technique = re.search(r"how to (\w+)", user_message)  # Extract the technique
+        technique = re.search(r"how to (.+)", user_message)  # Extract the technique
         if technique:
             technique_name = technique.group(1)
             google_url = f"https://www.google.com/search?q=how+to+{technique_name}"
@@ -462,7 +465,7 @@ class ActionAnswerQuestions(Action):
         # Handle vague "how to" questions like "How do I do that?"
         if current_step:
             # Assuming 'current_step' contains a description of what the user is working on (e.g., a technique)
-            technique = current_step.get("text")  # You can refine this further to extract techniques
+            technique = current_step.get("text")  
             google_url = f"https://www.google.com/search?q=how+to+{technique.replace(' ', '+')}"
             youtube_url = f"https://www.youtube.com/results?search_query=how+to+{technique.replace(' ', '+')}"
             dispatcher.utter_message(text=f"Here are some links to learn how to {technique}:\n- Google: {google_url}\n- YouTube: {youtube_url}")
