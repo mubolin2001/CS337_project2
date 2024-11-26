@@ -33,7 +33,6 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 from recipe import *
-import spacy
 import json
 
 postfix = {1: "st", 2: "nd", 3: "rd"}
