@@ -448,7 +448,7 @@ class ActionAnswerQuestions(Action):
 
     def handle_how_to_question(self, user_message, dispatcher):
         # Handle specific "how to" questions (e.g., "How do I preheat the oven?")
-        technique = re.search(r"how to (\w+)", user_message)  # Extract the technique
+        technique = re.search(r"how to (.+)", user_message)  # Extract the technique
         if technique:
             technique_name = technique.group(1)
             google_url = f"https://www.google.com/search?q=how+to+{technique_name}"
