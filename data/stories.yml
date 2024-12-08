@@ -1,6 +1,10 @@
 version: "3.1"
 
 stories:
+- story: transform recipe to vegetarian
+  steps:
+    - intent: transform_vegetarian_recipe
+    - action: actionTransformVegetarianRecipe
 - story: Recipe URL validatio, parsing and navigates
   steps:
   - intent: greet

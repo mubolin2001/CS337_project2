@@ -25,7 +25,7 @@ class Method:
         }
 
 class Step:
-    def __init__(self, text, previous, next, ingredients=None, time=None, temperature=None, tool_substitution=None):
+    def __init__(self, text, previous = None, next = NotImplemented, ingredients=None, time=None, temperature=None, tool_substitution=None):
         self.text = text
         #self.previous = previous
         #self.next = next
@@ -72,3 +72,59 @@ class Recipe:
             "steps": [step.to_dict() for step in self.steps],
             "current_step": 0
         }
+class RecipeTransformer:
+    """Class to handle transformations to and from vegetarian recipes."""
+
+    MEAT_TO_VEG_SUBS = {
+        "chicken": "tofu",
+        "beef": "mushrooms",
+        "pork": "tempeh",
+        "fish": "jackfruit",
+        "shrimp": "king oyster mushrooms",
+        "bacon": "smoked tofu",
+        "ground meat": "lentils",
+        "sausage": "vegetarian sausage",
+        "duck": "seitan",
+        "lamb": "eggplant",
+        "meat": "vegetables"
+    }
+
+    VEG_TO_MEAT_SUBS = {
+        "tofu": "chicken",
+        "mushrooms": "beef",
+        "tempeh": "pork",
+        "jackfruit": "fish",
+        "lentils": "ground meat",
+        "smoked tofu": "bacon",
+        "vegetarian sausage": "sausage",
+        "seitan": "duck",
+        "eggplant": "lamb"
+    }
+
+    def transform_to_vegetarian(self, ingredients: list[Ingredient], steps: list[Step]) -> tuple:
+        """Transform non-vegetarian ingredients and update steps."""
+        for ingredient in ingredients:
+            for meat, substitute in self.MEAT_TO_VEG_SUBS.items():
+                if meat in ingredient.name.lower():
+                    ingredient.name = ingredient.name.replace(meat, substitute)
+                    ingredient.descriptor = "vegetarian"
+                    # Update the steps to replace the meat with the substitute
+                    self._update_steps(steps, meat, substitute)
+        return ingredients, steps
+
+    def transform_to_non_vegetarian(self, ingredients: list[Ingredient], steps: list[Step]) -> tuple:
+        """Transform vegetarian ingredients and update steps."""
+        for ingredient in ingredients:
+            for veg, substitute in self.VEG_TO_MEAT_SUBS.items():
+                if veg in ingredient.name.lower():
+                    ingredient.name = ingredient.name.replace(veg, substitute)
+                    ingredient.descriptor = "non-vegetarian"
+                    # Update the steps to replace the vegetarian ingredient with the substitute
+                    self._update_steps(steps, veg, substitute)
+        return ingredients, steps
+
+    def _update_steps(self, steps: list[Step], old_term: str, new_term: str):
+        """Helper method to replace terms in step descriptions."""
+        for step in steps:
+            if old_term in step.text.lower():
+                step.text = step.text.replace(old_term, new_term)

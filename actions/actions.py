@@ -40,6 +40,41 @@ postfix = {1: "st", 2: "nd", 3: "rd"}
 # reset memory
 def reset():
     return [SlotSet("recipe_url", None), SlotSet("recipe_object", None), SlotSet("current_step_index", None)]
+class ActionTransformVegetarianRecipe(Action):
+    def name(self) -> str:
+        return "actionTransformVegetarianRecipe"
+
+    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: dict) -> list:
+        user_message = tracker.latest_message.get("text").lower()
+        recipe_json = tracker.get_slot("recipe_object")
+
+        if not recipe_json:
+            dispatcher.utter_message(text="Please provide a recipe URL first.")
+            return [FollowupAction("utter_ask_url")]
+
+        # Load the recipe
+        recipe_data = json.loads(recipe_json)
+        ingredients = [Ingredient(**ing) for ing in recipe_data["ingredients"]]
+        method = Method(**recipe_data["method"])
+        steps = [Step(step["text"], None, None, step.get("ingredients"), step.get("time"), step.get("temperature")) for step in recipe_data["steps"]]
+
+        recipe = Recipe(recipe_data["title"], ingredients, recipe_data["tools"], method, steps)
+
+        transformer = RecipeTransformer()
+
+        if "non-vegetarian" in user_message:
+            transformer.transform_to_non_vegetarian(ingredients, steps)
+            dispatcher.utter_message(text="The recipe has been transformed to non-vegetarian!")
+        elif "vegetarian" in user_message:
+            transformer.transform_to_vegetarian(ingredients, steps)
+            dispatcher.utter_message(text="The recipe has been transformed to vegetarian!")
+        else:
+            print(user_message)
+            dispatcher.utter_message(text="I didn't understand your choice. Please specify 'vegetarian' or 'non-vegetarian'.")
+            return []
+
+        # Save the transformed recipe back to the slot
+        return [SlotSet("recipe_object", json.dumps(recipe.to_dict()))]
 
 class ActionValidateURL(Action):
     def name(self) -> str:
@@ -469,3 +504,59 @@ class ActionAnswerQuestions(Action):
         else:
             dispatcher.utter_message(text="Sorry, I couldn't find any reference to what you're trying to do. Could you please clarify?")
         return []    
+class RecipeTransformer:
+    """Class to handle transformations to and from vegetarian recipes."""
+
+    MEAT_TO_VEG_SUBS = {
+        "chicken": "tofu",
+        "beef": "mushrooms",
+        "pork": "tempeh",
+        "fish": "jackfruit",
+        "shrimp": "king oyster mushrooms",
+        "bacon": "smoked tofu",
+        "ground meat": "lentils",
+        "sausage": "vegetarian sausage",
+        "duck": "seitan",
+        "lamb": "eggplant",
+        "meat": "vegetables"
+    }
+
+    VEG_TO_MEAT_SUBS = {
+        "tofu": "chicken",
+        "mushrooms": "beef",
+        "tempeh": "pork",
+        "jackfruit": "fish",
+        "lentils": "ground meat",
+        "smoked tofu": "bacon",
+        "vegetarian sausage": "sausage",
+        "seitan": "duck",
+        "eggplant": "lamb"
+    }
+
+    def transform_to_vegetarian(self, ingredients: list[Ingredient], steps: list[Step]) -> tuple:
+        """Transform non-vegetarian ingredients and update steps."""
+        for ingredient in ingredients:
+            for meat, substitute in self.MEAT_TO_VEG_SUBS.items():
+                if meat in ingredient.name.lower():
+                    ingredient.name = ingredient.name.replace(meat, substitute)
+                    ingredient.descriptor = "vegetarian"
+                    # Update the steps to replace the meat with the substitute
+                    self._update_steps(steps, meat, substitute)
+        return ingredients, steps
+
+    def transform_to_non_vegetarian(self, ingredients: list[Ingredient], steps: list[Step]) -> tuple:
+        """Transform vegetarian ingredients and update steps."""
+        for ingredient in ingredients:
+            for veg, substitute in self.VEG_TO_MEAT_SUBS.items():
+                if veg in ingredient.name.lower():
+                    ingredient.name = ingredient.name.replace(veg, substitute)
+                    ingredient.descriptor = "non-vegetarian"
+                    # Update the steps to replace the vegetarian ingredient with the substitute
+                    self._update_steps(steps, veg, substitute)
+        return ingredients, steps
+
+    def _update_steps(self, steps: list[Step], old_term: str, new_term: str):
+        """Helper method to replace terms in step descriptions."""
+        for step in steps:
+            if old_term in step.text.lower():
+                step.text = step.text.replace(old_term, new_term)

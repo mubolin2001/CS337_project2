@@ -16,6 +16,7 @@ intents:
   - ask_done
   - ask_substitution
   - ask_questions
+  - transform_vegetarian_recipe
 
 slots:
   recipe_url:
@@ -52,6 +53,7 @@ actions:
   - action_take_to_nth_step
   - action_provide_step_details
   - action_answer_questions
+  - actionTransformVegetarianRecipe
 
 entities:
   - url

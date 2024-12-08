@@ -1,5 +1,15 @@
 version: "3.1"
 nlu:
+  - intent: transform_vegetarian_recipe
+    examples: |
+      - Transform this to vegetarian.
+      - Can you make this recipe vegetarian?
+      - Change this to a vegetarian recipe.
+      - Convert this recipe to non-vegetarian.
+      - I want this to be non-vegetarian.
+      - Make it non-vegetarian.
+      - Make it vegetarian.
+      - Turn this into a vegetarian dish.
   - lookup: step_number
     examples: |
       - 1
@@ -129,6 +139,7 @@ nlu:
       - How to preheat the oven?
       - How do I do that?
       - How do I do this?
+  
 
 regex:
   - name: step_number

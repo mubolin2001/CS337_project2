@@ -2,3 +2,4 @@
 /.rasa
 /__pycache__
 /models
+/venv
