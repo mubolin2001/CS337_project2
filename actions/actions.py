@@ -84,10 +84,16 @@ class ActionTransformVegetarianRecipe(Action):
         elif "not healthy recipe" in user_message:
             transformer.To_no_healthy(ingredients, steps)
             dispatcher.utter_message(text="The recipe is no healthy version!")
+        elif "gluten-free" in user_message:
+                transformer.To_Gluten_free(ingredients, steps)
+                dispatcher.utter_message(text="The recipe is gluten-free!")
+        elif "lactose-free" in user_message:
+            transformer.To_Lactose_free(ingredients, steps)
+            dispatcher.utter_message(text="The recipe is lactose-free!")
 
         else:
             print(user_message)
-            dispatcher.utter_message(text="I didn't understand your choice. Please specify 'vegetarian','non-vegetarian', 'healthy recipe', or 'not healthy recipe'.")
+            dispatcher.utter_message(text="I didn't understand your choice. Please specify 'vegetarian','non-vegetarian', 'healthy recipe', 'not healthy recipe', 'gluten-free', or 'lactose-free'.")
             return []
 
         # Save the transformed recipe back to the slot
@@ -571,6 +577,24 @@ class RecipeTransformer:
         "maple syrup": "corn syrup",
         "yogurt": "sour cream"
     }
+
+    Gluten_free = {
+        "pastas": "cassava noodle",
+        "beer": "rum",
+        "soy sauce": "tamari",
+        "couscous": "riced cauliflower",
+        "semolina flour": "oat flour",
+        "seitan": "lentils",
+        "bulgur": "quinoa"
+    }
+
+    Lactose_free = {
+        "milk": "lactose-free milk",
+        "cheese": "tofu",
+        "butter": "nut butter",
+        "yogurt": "soy yogurt",
+        "cream": "coconut cream"
+    }
     def transform_to_vegetarian(self, ingredients: list[Ingredient], steps: list[Step]) -> tuple:
         """Transform non-vegetarian ingredients and update steps."""
         for ingredient in ingredients:
@@ -611,6 +635,27 @@ class RecipeTransformer:
                     x.descriptor = "No Healthy"
                     self._update_steps(steps, healthy, substitute)
         return ingredients, steps
+
+#Gluten- or lactose-free part
+    def To_Gluten_free(self, ingredients, steps):
+        for x in ingredients:
+            for glu, substitute in self.Gluten_free.items():
+                if glu in x.name.lower():
+                    x.name = x.name.replace(glu, substitute)
+                    x.descriptor = "gluten-free"
+                    self._update_steps(steps, glu, substitute)
+        return ingredients, steps
+
+    def To_Lactose_free(self, ingredients, steps):
+        for x in ingredients:
+            for lac, substitute in self.Lactose_free.items():
+                if lac in x.name.lower():
+                    x.name = x.name.replace(lac, substitute)
+                    x.descriptor = "lactose-free"
+                    self._update_steps(steps, lac, substitute)
+        return ingredients, steps
+
+
 
     def _update_steps(self, steps: list[Step], old_term: str, new_term: str):
         """Helper method to replace terms in step descriptions."""
