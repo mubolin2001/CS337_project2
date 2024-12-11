@@ -78,12 +78,12 @@ class ActionTransformVegetarianRecipe(Action):
             transformer.transform_to_vegetarian(ingredients, steps)
             dispatcher.utter_message(text="The recipe has been transformed to vegetarian!")
 
-        elif "healthy recipe" in user_message:
-            transformer.To_healthy(ingredients, steps)
-            dispatcher.utter_message(text="The recipe is healthier version!")
-        elif "not healthy recipe" in user_message:
+        elif "non-healthy" in user_message:
             transformer.To_no_healthy(ingredients, steps)
-            dispatcher.utter_message(text="The recipe is no healthy version!")
+            dispatcher.utter_message(text="The recipe is in non-healthier version!")
+        elif "healthy" in user_message:
+            transformer.To_healthy(ingredients, steps)
+            dispatcher.utter_message(text="The recipe is healthy version!")
         elif "gluten-free" in user_message:
                 transformer.To_Gluten_free(ingredients, steps)
                 dispatcher.utter_message(text="The recipe is gluten-free!")
@@ -541,7 +541,9 @@ class RecipeTransformer:
         "sausage": "vegetarian sausage",
         "duck": "seitan",
         "lamb": "eggplant",
-        "meat": "vegetables"
+        "meat": "vegetables",
+        "bacon": "salted vegetables",
+        "butter": "vegetarian butter"
     }
 
     VEG_TO_MEAT_SUBS = {
@@ -553,7 +555,11 @@ class RecipeTransformer:
         "smoked tofu": "bacon",
         "vegetarian sausage": "sausage",
         "seitan": "duck",
-        "eggplant": "lamb"
+        "eggplant": "lamb",
+        "vegetables": "meat",
+        "salted vegetables": "bacon",
+        "vegetarian butter": "butter"
+
     }
 
     Healthy = {
@@ -564,7 +570,7 @@ class RecipeTransformer:
         "sour cream": "yogurt",
         "bacon": "tempeh",
         "white bread": "rye bread",
-        "corn syrup": "maple syrup"
+        "syrup": "maple syrup"
     }
 
     Not_healthy = {
@@ -585,7 +591,10 @@ class RecipeTransformer:
         "couscous": "riced cauliflower",
         "semolina flour": "oat flour",
         "seitan": "lentils",
-        "bulgur": "quinoa"
+        "bulgur": "quinoa",
+        "hot buffalo wing sauce": "tamari",
+        "flour": "gluten-free flour"
+        
     }
 
     Lactose_free = {
@@ -593,7 +602,7 @@ class RecipeTransformer:
         "cheese": "tofu",
         "butter": "nut butter",
         "yogurt": "soy yogurt",
-        "cream": "coconut cream"
+        "sour cream": "coconut cream"
     }
     def transform_to_vegetarian(self, ingredients: list[Ingredient], steps: list[Step]) -> tuple:
         """Transform non-vegetarian ingredients and update steps."""

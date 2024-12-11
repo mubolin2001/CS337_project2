@@ -66,3 +66,58 @@ the terminal. As long as you include 'steps', the chatbot will do the job.
 - <span style="color: blue;">- Google: https://www.google.com/search?q=how+to+Preheat+the+oven+to+350+degrees+F+(175+degrees+C).</span>
 - <span style="color: blue;">- YouTube: https://www.youtube.com/results?search_query=how+to+Preheat+the+oven+to+350+degrees+F+(175+degrees+C).</span>
 - Your input -> /stop
+## for project3
+- Your input -> https://www.allrecipes.com/recipe/16167/beef-bourguignon-i/    
+- <span style = "color: yellow;">- Sure, let me fetch the recipe from https://www.allrecipes.com/recipe/16167/beef-bourguignon-i/
+Alright. So let's start working with 'Beef Bourguignon'. What do you want to do?
+[1] Go over ingredients list
+[2] Go over recipe steps.
+Your input ->  1                                                                                     
+Here are the ingredients:
+3 cups Burgundy wine
+2  onions, thinly sliced
+2  carrots, chopped
+2 tablespoons brandy
+1 clove garlic, crushed
+10  whole black peppercorns
+1 teaspoon salt
+1 sprig fresh parsley
+1  bay leaf
+2 pounds cubed beef chuck roast
+4 tablespoons olive oil, divided
+¼ pound bacon, cubed
+2  onions, chopped
+3 tablespoons all-purpose flour
+2 cloves garlic, crushed
+1 tablespoon tomato paste
+1 (10.5 ounce) can beef broth
+salt and pepper to taste
+4 tablespoons butter
+1 pound fresh mushrooms, sliced </span>
+- Your input ->  transform it to vegetarian 
+- <span style = "color: yellow;"> The recipe has been transformed to vegetarian! </span>
+Your input ->  1    
+- <span style = "color: yellow;">Here are the ingredients:
+3 cups Burgundy wine
+2  onions, thinly sliced
+2  carrots, chopped
+2 tablespoons brandy
+1 clove garlic, crushed
+10  whole black peppercorns
+1 teaspoon salt
+1 sprig fresh parsley
+1  bay leaf
+2 pounds cubed <b style = "color: white">mushrooms</b> chuck roast
+4 tablespoons olive oil, divided
+¼ pound salted vegetables, cubed
+2  onions, chopped
+3 tablespoons all-purpose flour
+2 cloves garlic, crushed
+1 tablespoon tomato paste
+1 (10.5 ounce) can mushrooms broth
+salt and pepper to taste
+4 tablespoons <b style = "color: white">vegetarian butter</b>
+1 pound fresh mushrooms, sliced</span>
+### We also have such transformation in the steps. Besides, feel free to try health, non-health, gluten-free, lactose-free recipe by typing "transform it to ... recipe.
+
+
