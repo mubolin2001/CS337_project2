@@ -118,6 +118,6 @@ Your input ->  1
 salt and pepper to taste
 4 tablespoons <b style = "color: white">vegetarian butter</b>
 1 pound fresh mushrooms, sliced</span>
-### We also have such transformation in the steps. Besides, feel free to try health, non-health, gluten-free, lactose-free recipe by typing "transform it to ... recipe.
+### We also have such transformation in the steps. Besides, feel free to try non-vegetarian, health, non-health, gluten-free, lactose-free recipe by typing "transform it to ... recipe".
 
 
